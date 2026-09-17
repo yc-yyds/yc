@@ -55,6 +55,27 @@ html[data-theme="dark"]{
   --glass-bg:rgba(20,28,48,.44);
   --glass-edge:rgba(120,180,255,.42);--glass-stroke:rgba(150,205,255,.50);--glass-hi:rgba(170,220,255,.42);
 }
+/* 主题切换平滑过渡：切换瞬间为所有元素短暂应用「变量渐变」动画，
+   背景色 / 文字颜色 / 边框 / 阴影 / SVG 填充描边等随主题变量平滑过渡；
+   过渡结束后立即移除该类，日常运行零额外开销，不影响页面性能 */
+html.theme-anim,
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after{
+  transition:background-color .6s cubic-bezier(.4,0,.2,1),
+             color .6s cubic-bezier(.4,0,.2,1),
+             border-color .6s cubic-bezier(.4,0,.2,1),
+             box-shadow .6s cubic-bezier(.4,0,.2,1),
+             fill .6s cubic-bezier(.4,0,.2,1),
+             stroke .6s cubic-bezier(.4,0,.2,1),
+             text-shadow .6s cubic-bezier(.4,0,.2,1) !important;
+}
+@media (prefers-reduced-motion: reduce){
+  html.theme-anim,
+  html.theme-anim *,
+  html.theme-anim *::before,
+  html.theme-anim *::after{ transition:none !important; }
+}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:88px;-webkit-text-size-adjust:100%;
   background-color:var(--bg);overflow-x:hidden}
@@ -767,7 +788,7 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
 
 <!-- 正文页背景氛围层（原生 Canvas，纯装饰）：
      白天 = iOS 玻璃质感（毛玻璃光斑 + 柔和渐变 + 浮尘）；
-     夜间 = 赛博朋克机甲（霓虹网格 + 棱镜色散光 + 地面光剑 + 散景） -->
+     夜间 = 赛博朋克机甲（霓虹网格 + 棱镜色散光 + 散景） -->
 <canvas id="pageCanvas" aria-hidden="true"></canvas>
 
 <!-- ===================== 顶部全局滚动进度条（h-1 · cyan → emerald） ===================== -->
@@ -1289,7 +1310,7 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
    正文页背景氛围层（原生 Canvas）—— 日夜双主题 + 平滑过渡
    · 白天（iOS 玻璃）：柔光玻璃光斑 / 高光描边 / 柔和渐变 / 浮尘
    · 夜间（赛博朋克机甲）：透视霓虹网格 / 棱镜色散光 / 霓虹散景
-     / 地面光剑 / 扫描线 / 金属冷光
+     / 扫描线 / 金属冷光
    · 通过 themeMix（0=白天 → 1=夜间）在两种风格间平滑交叉淡入淡出，
      切换主题时由 rAF 缓动逼近目标值
    · 纯装饰：pointer-events:none；页面隐藏自动暂停；DPR 上限 2
@@ -1359,16 +1380,16 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
         tw:rand(0.3,1.0), off:Math.random()*TAU
       });
     }
-    /* 太阳表面颗粒纹理（米粒组织）：盘面内细小亮斑 */
+    /* 太阳表面颗粒纹理（米粒组织）：更细密、柔和的暖白亮斑 */
     sunGrain.length=0;
-    var g=Math.round(sun.r*sun.r/42);
+    var g=Math.round(sun.r*sun.r/26);
     for(var k=0;k<g;k++){
-      var ga=Math.random()*TAU, gd=Math.sqrt(Math.random())*sun.r*0.92;
+      var ga=Math.random()*TAU, gd=Math.sqrt(Math.random())*sun.r*0.94;
       sunGrain.push({
         x:Math.cos(ga)*gd, y:Math.sin(ga)*gd,
-        r:rand(0.5,1.7),
-        a:rand(0.10,0.30),
-        tw:rand(0.5,1.4), off:Math.random()*TAU
+        r:rand(0.4,1.3),
+        a:rand(0.07,0.20),
+        tw:rand(0.4,1.2), off:Math.random()*TAU
       });
     }
   }
@@ -1407,7 +1428,7 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
     }
   }
 
-  /* ============ 夜间：棱镜光线 / 霓虹散景 / 地面光剑 ============ */
+  /* ============ 夜间：棱镜光线 / 霓虹散景 ============ */
   var rays=[],bokehs=[];
   var RAY_COLORS=[[255,60,60],[60,255,140],[70,150,255],[255,160,40],[255,43,214],[90,230,240]];
 
@@ -1442,86 +1463,6 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
     }
   }
 
-  /* 光剑（放置在地面上的发光剑，透视斜放，随呼吸脉冲） */
-  function drawSaber(t,a){
-    if(a<=0.002) return;
-    var vx=W/2, vy=H*0.58;           /* 透视消失点（与网格地平线一致） */
-    var hx=W*0.72, hy=H*0.90;        /* 剑柄近端（右下角地面） */
-    var dx=vx-hx, dy=vy-hy;
-    var len=Math.hypot(dx,dy)||1;
-    var ux=dx/len, uy=dy/len;        /* 剑柄 → 剑尖 单位向量 */
-    var px=-uy, py=ux;               /* 垂直向量 */
-    var pulse=0.82+0.18*Math.sin(t*1.4);
-
-    var tipX=hx+ux*len*0.95, tipY=hy+uy*len*0.95;
-    var bladeBaseW=Math.max(5,H*0.012);
-    var bladeTipW=bladeBaseW*0.42;
-
-    /* ① 剑刃外发光（大范围青色光晕） */
-    var gw=bladeBaseW*3.6;
-    var glow=ctx.createLinearGradient(hx,hy,tipX,tipY);
-    glow.addColorStop(0,'rgba(34,211,238,'+(0.28*a*pulse).toFixed(4)+')');
-    glow.addColorStop(1,'rgba(34,211,238,'+(0.10*a*pulse).toFixed(4)+')');
-    ctx.fillStyle=glow;
-    ctx.beginPath();
-    ctx.moveTo(hx+px*gw, hy+py*gw);
-    ctx.lineTo(tipX+px*gw*0.5, tipY+py*gw*0.5);
-    ctx.lineTo(tipX-px*gw*0.5, tipY-py*gw*0.5);
-    ctx.lineTo(hx-px*gw, hy-py*gw);
-    ctx.closePath(); ctx.fill();
-
-    /* ② 剑刃本体：亮白核 + 青色渐变 */
-    var blade=ctx.createLinearGradient(hx,hy,tipX,tipY);
-    blade.addColorStop(0,'rgba(205,255,255,'+(0.95*a*pulse).toFixed(4)+')');
-    blade.addColorStop(0.4,'rgba(120,240,255,'+(0.85*a*pulse).toFixed(4)+')');
-    blade.addColorStop(1,'rgba(80,220,255,'+(0.72*a*pulse).toFixed(4)+')');
-    ctx.fillStyle=blade;
-    ctx.beginPath();
-    ctx.moveTo(hx+px*bladeBaseW, hy+py*bladeBaseW);
-    ctx.lineTo(tipX+px*bladeTipW, tipY+py*bladeTipW);
-    ctx.lineTo(tipX-px*bladeTipW, tipY-py*bladeTipW);
-    ctx.lineTo(hx-px*bladeBaseW, hy-py*bladeBaseW);
-    ctx.closePath(); ctx.fill();
-
-    /* ③ 剑刃核心高亮线 */
-    ctx.strokeStyle='rgba(240,255,255,'+(0.9*a).toFixed(4)+')';
-    ctx.lineWidth=Math.max(1.5,bladeBaseW*0.5);
-    ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(hx,hy); ctx.lineTo(tipX,tipY); ctx.stroke();
-
-    /* ④ 剑柄：金属暗色 + 高光 */
-    var hiltLen=len*0.14;
-    var hiltW=bladeBaseW*0.95;
-    var hEndX=hx-ux*hiltLen, hEndY=hy-uy*hiltLen;
-    var hilt=ctx.createLinearGradient(hx,hy,hEndX,hEndY);
-    hilt.addColorStop(0,'rgba(185,195,215,'+(0.9*a).toFixed(4)+')');
-    hilt.addColorStop(0.5,'rgba(95,105,135,'+(0.85*a).toFixed(4)+')');
-    hilt.addColorStop(1,'rgba(50,58,82,'+(0.9*a).toFixed(4)+')');
-    ctx.fillStyle=hilt;
-    ctx.beginPath();
-    ctx.moveTo(hx+px*hiltW, hy+py*hiltW);
-    ctx.lineTo(hEndX+px*hiltW*0.82, hEndY+py*hiltW*0.82);
-    ctx.lineTo(hEndX-px*hiltW*0.82, hEndY-py*hiltW*0.82);
-    ctx.lineTo(hx-px*hiltW, hy-py*hiltW);
-    ctx.closePath(); ctx.fill();
-    /* 剑柄高光描边 */
-    ctx.strokeStyle='rgba(200,215,240,'+(0.5*a).toFixed(4)+')';
-    ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(hx+px*hiltW*0.9,hy+py*hiltW*0.9); ctx.lineTo(hEndX+px*hiltW*0.7,hEndY+py*hiltW*0.7); ctx.stroke();
-
-    /* ⑤ 地面接触光斑（光剑映在地面上的青色光，符合透视接触） */
-    var gg=ctx.createRadialGradient(hx,hy,0,hx,hy,bladeBaseW*6);
-    gg.addColorStop(0,'rgba(34,211,238,'+(0.22*a*pulse).toFixed(4)+')');
-    gg.addColorStop(1,'rgba(34,211,238,0)');
-    ctx.fillStyle=gg;
-    ctx.save();
-    ctx.translate(hx,hy);
-    ctx.rotate(Math.atan2(uy,ux));
-    ctx.scale(1,0.32);
-    ctx.beginPath(); ctx.arc(0,0,bladeBaseW*6,0,TAU); ctx.fill();
-    ctx.restore();
-  }
-
   function resize(){
     DPR=Math.min(window.devicePixelRatio||1,2);
     W=window.innerWidth; H=window.innerHeight;
@@ -1545,60 +1486,85 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
   }
 
   /* ============ 白天渲染（iOS 玻璃） ============ */
-  /* 小太阳：右上角暖色发光体，多层径向渐变（纯圆形，无凸出） + 表面纹理 */
+  /* 小太阳：右上角暖色发光体。
+     盘面平滑连续渐变（白热核 → 金黄 → 深琥珀，含临边昏暗）+ 细密米粒组织，
+     边缘以「内圈柔亮线 / 暖色临边环 / 柔和外日冕」三层呈现 ——
+     轮廓清晰的同时发光过渡自然，光照柔和美观 */
   function drawSun(t,a){
     var sx=sun.x, sy=sun.y, sr=sun.r;
-    var breathe=0.86+0.14*Math.sin(t*0.6);
+    var breathe=0.90+0.10*Math.sin(t*0.5);
 
-    /* ① 外层暖色大气光晕（大范围，自然扩散） */
-    var R=sr*4.6;
+    /* ① 外层暖色大气光晕：平滑自然衰减（近轮廓处收敛，衬托锐利边缘） */
+    var R=sr*5.0;
     var g=ctx.createRadialGradient(sx,sy,0,sx,sy,R);
-    g.addColorStop(0,'rgba(255,240,190,'+(0.38*a*breathe).toFixed(4)+')');
-    g.addColorStop(0.3,'rgba(255,224,158,'+(0.20*a*breathe).toFixed(4)+')');
-    g.addColorStop(0.55,'rgba(255,208,135,'+(0.10*a*breathe).toFixed(4)+')');
-    g.addColorStop(0.8,'rgba(255,198,120,'+(0.04*a).toFixed(4)+')');
-    g.addColorStop(1,'rgba(255,195,118,0)');
+    g.addColorStop(0,'rgba(255,240,192,'+(0.30*a*breathe).toFixed(4)+')');
+    g.addColorStop(0.22,'rgba(255,226,162,'+(0.15*a*breathe).toFixed(4)+')');
+    g.addColorStop(0.48,'rgba(255,212,140,'+(0.075*a*breathe).toFixed(4)+')');
+    g.addColorStop(0.74,'rgba(255,200,120,'+(0.030*a).toFixed(4)+')');
+    g.addColorStop(1,'rgba(255,196,118,0)');
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(sx,sy,R,0,TAU); ctx.fill();
 
-    /* ③ 中层柔光（过渡带，让光晕更饱满） */
-    var R2=sr*2.5;
+    /* ② 中层柔光过渡：让光晕更饱满柔和 */
+    var R2=sr*2.6;
     var g2=ctx.createRadialGradient(sx,sy,0,sx,sy,R2);
-    g2.addColorStop(0,'rgba(255,248,216,'+(0.58*a*breathe).toFixed(4)+')');
-    g2.addColorStop(0.55,'rgba(255,230,168,'+(0.26*a*breathe).toFixed(4)+')');
-    g2.addColorStop(1,'rgba(255,218,148,0)');
+    g2.addColorStop(0,'rgba(255,249,220,'+(0.42*a*breathe).toFixed(4)+')');
+    g2.addColorStop(0.55,'rgba(255,232,170,'+(0.18*a*breathe).toFixed(4)+')');
+    g2.addColorStop(1,'rgba(255,220,150,0)');
     ctx.fillStyle=g2;
     ctx.beginPath(); ctx.arc(sx,sy,R2,0,TAU); ctx.fill();
 
-    /* ④ 太阳本体：亮白核 → 金黄 → 暖橙边缘 */
+    /* ③-⑤ 盘面：source-over，边缘实、层次自然 */
+    ctx.globalCompositeOperation='source-over';
+    ctx.save();
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,TAU); ctx.clip();
+    /* ③ 太阳本体：白热核 → 暖白 → 金黄 → 深琥珀，平滑连续渐变 + 临边昏暗 */
     var g3=ctx.createRadialGradient(sx,sy,0,sx,sy,sr);
-    g3.addColorStop(0,'rgba(255,255,248,'+(0.98*a).toFixed(4)+')');
-    g3.addColorStop(0.35,'rgba(255,248,210,'+(0.92*a).toFixed(4)+')');
-    g3.addColorStop(0.65,'rgba(255,226,165,'+(0.78*a).toFixed(4)+')');
-    g3.addColorStop(0.88,'rgba(255,196,118,'+(0.50*a).toFixed(4)+')');
-    g3.addColorStop(1,'rgba(255,178,96,0)');
+    g3.addColorStop(0.00,'rgba(255,255,253,'+(0.99*a).toFixed(4)+')');
+    g3.addColorStop(0.22,'rgba(255,253,240,'+(0.99*a).toFixed(4)+')');
+    g3.addColorStop(0.45,'rgba(255,246,215,'+(0.98*a).toFixed(4)+')');
+    g3.addColorStop(0.66,'rgba(255,232,172,'+(0.97*a).toFixed(4)+')');
+    g3.addColorStop(0.84,'rgba(255,209,118,'+(0.97*a).toFixed(4)+')');
+    g3.addColorStop(0.94,'rgba(255,186,76,'+(0.97*a).toFixed(4)+')');
+    g3.addColorStop(1.00,'rgba(252,166,56,'+(0.97*a).toFixed(4)+')');
     ctx.fillStyle=g3;
-    ctx.beginPath(); ctx.arc(sx,sy,sr,0,TAU); ctx.fill();
+    ctx.fillRect(sx-sr,sy-sr,sr*2,sr*2);
 
-    /* ⑤ 表面颗粒纹理（米粒组织）：盘面内细小亮斑，随呼吸明暗 */
+    /* ④ 表面颗粒（米粒组织）：更细密、柔和、暖白，铺满盘面 */
     for(var k=0;k<sunGrain.length;k++){
       var gr=sunGrain[k];
-      var gtw=0.5+0.5*Math.sin(t*gr.tw+gr.off);
+      var gtw=0.6+0.4*Math.sin(t*gr.tw+gr.off);
       var gx=sx+gr.x, gy=sy+gr.y;
-      var gg=ctx.createRadialGradient(gx,gy,0,gx,gy,gr.r*2.6);
-      gg.addColorStop(0,'rgba(255,255,245,'+(gr.a*gtw*a*0.9).toFixed(4)+')');
-      gg.addColorStop(1,'rgba(255,240,200,0)');
+      var gg=ctx.createRadialGradient(gx,gy,0,gx,gy,gr.r*3.0);
+      gg.addColorStop(0,'rgba(255,252,230,'+(gr.a*gtw*a*0.75).toFixed(4)+')');
+      gg.addColorStop(0.6,'rgba(255,244,200,'+(gr.a*gtw*a*0.25).toFixed(4)+')');
+      gg.addColorStop(1,'rgba(255,238,190,0)');
       ctx.fillStyle=gg;
-      ctx.beginPath(); ctx.arc(gx,gy,gr.r*2.6,0,TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(gx,gy,gr.r*3.0,0,TAU); ctx.fill();
     }
 
-    /* ⑥ 顶部高光：太阳上缘一抹更亮的弧光，增强立体感 */
-    var hg=ctx.createRadialGradient(sx,sy-sr*0.25,0,sx,sy-sr*0.25,sr*0.9);
-    hg.addColorStop(0,'rgba(255,255,252,'+(0.5*a*breathe).toFixed(4)+')');
-    hg.addColorStop(0.5,'rgba(255,252,235,'+(0.18*a*breathe).toFixed(4)+')');
-    hg.addColorStop(1,'rgba(255,250,230,0)');
+    /* ⑤ 顶部柔光：向光束方向轻微提亮，增强体积感而不失真 */
+    var hg=ctx.createRadialGradient(sx,sy-sr*0.28,0,sx,sy-sr*0.28,sr*1.0);
+    hg.addColorStop(0,'rgba(255,255,250,'+(0.34*a*breathe).toFixed(4)+')');
+    hg.addColorStop(0.55,'rgba(255,253,240,'+(0.12*a*breathe).toFixed(4)+')');
+    hg.addColorStop(1,'rgba(255,250,232,0)');
     ctx.fillStyle=hg;
-    ctx.beginPath(); ctx.arc(sx,sy,sr,0,TAU); ctx.fill();
+    ctx.fillRect(sx-sr,sy-sr,sr*2,sr*2);
+    ctx.restore();
+
+    /* ⑥ 边缘与日冕：内圈柔亮线（光球层）+ 暖色临边环 + 柔和外日冕，
+          既保持清晰轮廓，又让发光过渡更自然 */
+    ctx.lineWidth=2.0;
+    ctx.strokeStyle='rgba(255,250,226,'+(0.55*a).toFixed(4)+')';
+    ctx.beginPath(); ctx.arc(sx,sy,sr-0.8,0,TAU); ctx.stroke();
+    ctx.lineWidth=3.0;
+    ctx.strokeStyle='rgba(255,176,78,'+(0.30*a*breathe).toFixed(4)+')';
+    ctx.beginPath(); ctx.arc(sx,sy,sr+0.4,0,TAU); ctx.stroke();
+    ctx.lineWidth=4.5;
+    ctx.strokeStyle='rgba(255,150,56,'+(0.10*a*breathe).toFixed(4)+')';
+    ctx.beginPath(); ctx.arc(sx,sy,sr+2.2,0,TAU); ctx.stroke();
+
+    ctx.globalCompositeOperation='lighter';
   }
 
   /* 丁达尔光束：从太阳斜射下来的可见光束，锥形 + 颗粒感 */
@@ -1788,8 +1754,6 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
     ctx.fillStyle=cg;
     ctx.fillRect(0,0,W,H);
 
-    /* 光剑：放置在地面上的发光剑，右下角地面，呼吸脉冲 */
-    drawSaber(t,a);
     ctx.globalCompositeOperation='source-over';
     ctx.globalAlpha=1;
   }
@@ -2722,7 +2686,11 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
       return (h>=6&&h<18)?'light':'dark';
     }
 
+    var themeBooted=false;   /* 首次加载直接落定，避免初始闪烁 */
+    var themeAnimTimer=null;
     function apply(theme,persist){
+      var animate=themeBooted;   /* 之后发生的切换才启用平滑过渡 */
+      if(animate) rootEl.classList.add('theme-anim');
       rootEl.setAttribute('data-theme',theme);
       var isDark=theme==='dark';
       btn.innerHTML='<span class="ico-wrap">'+svg(isDark?'sun':'moon',18)+'</span>';
@@ -2731,6 +2699,14 @@ if(!document.documentElement.classList.contains('intro-skip')){ document.body.cl
       var meta=document.querySelector('meta[name="theme-color"]');
       if(meta) meta.setAttribute('content',isDark?'#05070f':'#eef2fa');
       if(persist){ try{ localStorage.setItem('resume-theme',theme); }catch(e){} }
+      if(animate){
+        if(themeAnimTimer) clearTimeout(themeAnimTimer);
+        themeAnimTimer=setTimeout(function(){
+          rootEl.classList.remove('theme-anim');
+          themeAnimTimer=null;
+        },700);
+      }
+      themeBooted=true;
     }
 
     /* 优先级：手动保存 > 系统偏好 > 时钟推断 */
