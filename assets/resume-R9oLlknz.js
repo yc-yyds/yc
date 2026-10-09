@@ -1,0 +1,1 @@
+import"./main-pqC7uune.js";import"./three-DYwPA7DG.js";const t=setInterval(()=>{(()=>{const t=document.querySelector(".lil-gui");if(!t)return!1;const e=t.querySelector(".title");return e&&"true"!==e.getAttribute("data-collapsed")&&(e.click(),e.setAttribute("data-collapsed","true")),!0})()&&clearInterval(t)},200);setTimeout(()=>clearInterval(t),5e3);
