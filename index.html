@@ -141,8 +141,14 @@ html[data-theme="light"] #canvas{filter:brightness(1.15) saturate(.9) contrast(.
 html[data-theme="dark"] #canvas{filter:brightness(1) saturate(1.1) contrast(1.05)}
 /* 覆盖木琴 base.css 对 body 的锁定，保证简历页面可正常滚动
    （木琴 canvas 是 fixed 定位，不依赖 body 滚动控制） */
-html,body{height:auto;overflow:visible;overscroll-behavior:auto}
+html,body{height:auto;overflow:visible;overscroll-behavior:none}
 body{position:static;inset:auto;touch-action:pan-y}
+/* 封面模式没有任何可滚动内容，禁止浏览器原生平移/回弹：
+   否则移动端在空白处向上拖动木琴时，浏览器会连带把整页拖下去，
+   顶部露出空白带（下拉刷新/橡皮筋效果）。聚焦模式仍保留 pan-y 以便正文滚动。
+   用 pinch-zoom 而非 none：同样禁用平移，但保留双指缩放（无障碍）。
+   不支持 pinch-zoom 的老内核回退到 none，效果一致。 */
+body.menu:not(.focus){touch-action:none;touch-action:pinch-zoom}
 /* 声音按钮：静音状态隐藏波纹、显示斜杠 */
 #sound-toggle.is-muted .sound-toggle__wave{display:none}
 #sound-toggle.is-muted .sound-toggle__slash{display:block}
