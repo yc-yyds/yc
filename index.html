@@ -318,6 +318,11 @@ button{font-family:inherit}
 
 /* 开场页锁滚动（仅由 JS 添加，脚本失效时正文天然可见，绝不白屏） */
 body.locked{overflow:hidden}
+/* 封面/聚焦模式一律禁用页面级滚动：
+   封面态无可滚动内容；聚焦态由板块内部滚动承担。
+   否则聚焦态页脚会把文档撑高，冒出原生滚动条——既允许整页被拖走，
+   又把固定定位的滑动栏挤到正文上造成遮挡。 */
+body.menu{overflow:hidden}
 .nav,main,.footer,.totop{transition:opacity .75s ease}
 main,.footer{transition:opacity .75s ease,transform .85s cubic-bezier(.22,.7,.25,1)}
 body.locked .nav,body.locked main,body.locked .footer,body.locked .totop{opacity:0;pointer-events:none}
@@ -1015,10 +1020,10 @@ body.focus .xylo-label{pointer-events:none!important}
 /* 点击后显示的板块在视口中居中：内容不足一屏时垂直居中；
    超过一屏时限高为视口高度并内部滚动，板块整体仍居中，不会顶到底部 */
 body.focus main{display:flex;flex-direction:column;align-items:center;
-  min-height:100vh;padding:88px 0 72px;box-sizing:border-box}
+  min-height:100vh;min-height:100dvh;padding:88px 0 72px;box-sizing:border-box}
 body.focus main > .section{padding:0}
 body.focus main > .section.is-active{width:100%;margin:auto 0;
-  max-height:calc(100vh - 160px);overflow-y:auto;overflow-x:hidden;
+  max-height:calc(100vh - 160px);max-height:calc(100dvh - 160px);overflow-y:auto;overflow-x:hidden;
   scrollbar-width:thin;overscroll-behavior:contain}
 body.focus main > .section.is-active::-webkit-scrollbar{width:6px}
 body.focus main > .section.is-active::-webkit-scrollbar-thumb{background:var(--glass-edge);border-radius:3px}
@@ -1039,11 +1044,18 @@ body.focus .cover-back{opacity:1;visibility:visible;transform:translate(-50%,0)}
    · 聚焦态：滑块位置 = 当前板块的滚动比例，拖动即滚动正文
    桌面端隐藏（有滚轮/系统滚动条），打印时隐藏。 */
 .scrollbar{display:none}
-@media(max-width:900px){
+/* 注意：限定 screen。否则打印时纸张宽度(~794px)也会命中 max-width:900px，
+   本条 .wrap 会覆盖打印块里的 .wrap{width:100%}，导致打印正文被削窄。 */
+@media screen and (max-width:900px){
+  /* 窄屏右缘已被自绘滑轨占用，正文左右各留出 30px，避免滑轨压住卡片/链接 */
+  .wrap{width:min(920px,100% - 60px)}
+  /* 该断点由自绘滑轨承担滚动指示，隐藏板块自身滚动条，避免两条滚动条重叠打架 */
+  body.focus main > .section.is-active{scrollbar-width:none}
+  body.focus main > .section.is-active::-webkit-scrollbar{width:0;height:0}
   .scrollbar{
-    position:fixed;right:5px;top:50%;transform:translateY(-50%);
+    position:fixed;right:3px;top:50%;transform:translateY(-50%);
     z-index:80;display:flex;flex-direction:column;align-items:center;gap:4px;
-    padding:5px 3px;border-radius:999px;cursor:grab;
+    padding:5px 0;border-radius:999px;cursor:grab;
     background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.12));
     border:1px solid var(--glass-edge);
     box-shadow:inset 0 1px 0 var(--glass-hi),0 8px 22px -16px rgba(16,24,40,.55);
@@ -1059,7 +1071,7 @@ body.focus .cover-back{opacity:1;visibility:visible;transform:translate(-50%,0)}
     color:var(--muted);opacity:.5;cursor:pointer;transition:opacity .2s var(--ease),color .2s var(--ease)}
   .scrollbar__arrow svg{width:10px;height:10px;display:block;fill:currentColor}
   .scrollbar__arrow:hover,.scrollbar__arrow:active{color:var(--brand);opacity:.95}
-  .scrollbar__track{position:relative;width:12px;height:min(42vh,300px);border-radius:999px;cursor:grab;
+  .scrollbar__track{position:relative;width:12px;height:min(42vh,300px);height:min(42dvh,300px);border-radius:999px;cursor:grab;
     background:linear-gradient(180deg,rgba(120,132,160,.13),rgba(120,132,160,.19));
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.30)}
   html[data-theme="dark"] .scrollbar__track{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.10));
